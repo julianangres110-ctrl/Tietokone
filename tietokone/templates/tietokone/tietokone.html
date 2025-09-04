@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <title>Kostenvoranschlag</title>
+    <style>
+        /* Grau für nicht ausgewählt, Grün für ausgewählt */
+        .item-label {
+            color: gray;
+        }
+        input[type="checkbox"]:checked + .item-label {
+            color: green;
+        }
+        #step2, #submit-button {
+            display: none;
+        }
+        label {
+            display: inline-block;
+            margin: 5px 0;
+            font-size: 16px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Kostenvoranschlag</h1>
+    <form method="post">
+        {% csrf_token %}
+        
+        <div id="step1">
+            <div>
+                <label for="{{ form.jahr.id_for_label }}">Jahr wählen:</label>
+                {{ form.jahr }}
+            </div>
+            <div>
+                <label for="{{ form.einsatztage.id_for_label }}">Zahl der Einsatztage angeben (auch Dezimalzahl mit Komma möglich, z. B. 1,5 für Eineinhalb Einsatztage):</label>
+                {{ form.einsatztage }}
+            </div>
+            <div>
+                <label for="{{ form.aufbautag.id_for_label }}">Mit Aufbautag (reduzierte Manpower, Beginn der Veranstaltung am Folgetag, keine Proben):</label>
+                {{ form.aufbautag }}
+            </div>
+            <div>
+                <label for="{{ form.name_veranstaltung.id_for_label }}">Name Veranstaltung:</label>
+                {{ form.name_veranstaltung }}
+            </div>
+            <div>
+                <label for="{{ form.einsatzbeginn.id_for_label }}">Einsatzbeginn:</label>
+                {{ form.einsatzbeginn }}
+            </div>
+            <button type="button" id="next-button">Weiter</button>
+        </div>
+
+        <div id="step2">
+            <h3>Manpower (auswählbar)</h3>
+            <!-- Projektabwicklung immer inkludiert -->
+            <p>Projektabwicklung/Beratung (immer inkludiert, <span class="price" data-base-price="projektabwicklung">150</span> € / Einheit)</p>
+            {% for field in form %}
+                {% if field.name == 'kameramann' %}
+                    {{ field }} <label class="item-label" for="{{ field.id_for_label }}" data-base-price="kameramann">{{ field.label }} (<span class="price">0</span> € / Tag)</label>
+                    <div class="anzahl-field" id="kameramann_anzahl_field">
+                        {{ form.kameramann_anzahl }}
+                    </div><br>
+                {% elif field.name == 'bimi' %}
+                    {{ field }} <label class="item-label" for="{{ field.id_for_label }}" data-base-price="bimi">{{ field.label }} (<span class="price">0</span> € / Tag)</label>
+                    <div class="anzahl-field" id="bimi_anzahl_field">
+                        {{ form.bimi_anzahl }}
+                    </div><br>
+                {% endif %}
+            {% endfor %}
+
+            <h3>Equipment (auswählbar)</h3>
+            {% for field in form %}
+                {% if field.name == 'broadcastkamera' %}
+                    {{ field }} <label class="item-label" for="{{ field.id_for_label }}" data-base-price="broadcastkamera">{{ field.label }} (<span class="price">0</span> € / Tag)</label>
+                    <div class="anzahl-field" id="broadcastkamera_anzahl_field">
+                        {{ form.broadcastkamera_anzahl }}
+                    </div><br>
+                {% elif field.name == 'ptz' %}
+                    {{ field }} <label class="item-label" for="{{ field.id_for_label }}" data-base-price="ptz">{{ field.label }} (<span class="price">0</span> € / Tag)</label>
+                    <div class="anzahl-field" id="ptz_anzahl_field">
+                        {{ form.ptz_anzahl }}
+                    </div><br>
+                {% elif field.name == 'satellitenkamera' %}
+                    {{ field }} <label class="item-label" for="{{ field.id_for_label }}" data-base-price="satellitenkamera">{{ field.label }} (<span class="price">0</span> € / Tag)</label>
+                    <div class="anzahl-field" id="satellitenkamera_anzahl_field">
+                        {{ form.satellitenkamera_anzahl }}
+                    </div><br>
+                {% elif field.name == 'videofunk' %}
+                    {{ field }} <label class="item-label" for="{{ field.id_for_label }}" data-base-price="videofunk">{{ field.label }} (<span class="price">0</span> € / Tag)</label>
+                    <div class="anzahl-field" id="videofunk_anzahl_field">
+                        {{ form.videofunk_anzahl }}
+                    </div><br>
+                {% elif field.name == 'aufzeichnungsmaterial' %}
+                    {{ field }} <label class="item-label" for="{{ field.id_for_label }}" data-base-price="aufzeichnungsmaterial">{{ field.label }} (<span class="price">0</span> € / 2 Std.)</label>
+                    <div class="anzahl-field" id="aufzeichnungsmaterial_anzahl_field">
+                        {{ form.aufzeichnungsmaterial_anzahl }}
+                    </div><br>
+                {% elif field.name == 'bildmischer' %}
+                    {{ field }} <label class="item-label" for="{{ field.id_for_label }}" data-base-price="bildmischer">{{ field.label }} (<span class="price">0</span> € / Tag)</label>
+                    <div class="anzahl-field" id="bildmischer_anzahl_field">
+                        {{ form.bildmischer_anzahl }}
+                    </div><br>
+                {% elif field.name in 'master_recorder,backup_recorder,intercom,on_demand_files,livestreaming' %}
+                    {{ field }} <label class="item-label" for="{{ field.id_for_label }}" data-base-price="{{ field.name }}">{{ field.label }} (<span class="price">0</span> € / Tag)</label><br>
+                {% elif field.name == 'sonderequipment' %}
+                    <label for="{{ form.sonderequipment.id_for_label }}">{{ form.sonderequipment.label }}</label>
+                    {{ form.sonderequipment }}
+                    <label for="{{ form.sonderequipment_preis.id_for_label }}">{{ form.sonderequipment_preis.label }} (€ / gesamter Einsatz):</label>
+                    {{ form.sonderequipment_preis }}<br>
+                {% endif %}
+            {% endfor %}
+        </div>
+
+        <button type="submit" id="submit-button">Berechnen</button>
+    </form>
+
+    {% if results %}
+    <h2>Ergebnisse für {{ results.name_veranstaltung }}</h2>
+    <p>Zeitraum: {{ results.zeitraum }}</p>
+    <h3>Manpower (Zwischensumme: {{ results.manpower_sub|floatformat:2 }} €)</h3>
+    <ul>
+        {% for item, calc in results.manpower_details.items %}
+        <li>{{ item }}: {{ calc }}</li>
+        {% endfor %}
+    </ul>
+    <h3>Equipment (Zwischensumme: {{ results.equipment_sub|floatformat:2 }} €)</h3>
+    <ul>
+        {% for item, calc in results.equipment_details.items %}
+        <li>{{ item }}: {{ calc }}</li>
+        {% endfor %}
+    </ul>
+    <h3>Summe Manpower: {{ results.sum_manpower|floatformat:2 }} €</h3>
+    <h3>Summe Equipment: {{ results.sum_equipment|floatformat:2 }} €</h3>
+    <h2>Grand Total: {{ results.grand_total|floatformat:2 }} €</h2>
+    <!-- Neuer PDF-Button -->
+    <a href="{% url 'generate_pdf' %}" target="_blank">
+        <button>PDF exportieren</button>
+    </a>
+    {% endif %}
+
+    
+
+    <script>
+        // Preise und Faktoren (hardcoded für JS)
+        const basePrices = {
+            'projektabwicklung': 150,
+            'kameramann': 200,
+            'bimi': 180,
+            'broadcastkamera': 300,
+            'ptz': 250,
+            'satellitenkamera': 200,
+            'videofunk': 150,
+            'bildmischer': 100,
+            'master_recorder': 80,
+            'backup_recorder': 70,
+            'intercom': 50,
+            'aufzeichnungsmaterial': 40,
+            'anfahrten': 100,
+            'on_demand_files': 50,
+            'livestreaming': 200,
+        };
+        const factors = {
+            '2025': 1.0,
+            '2026': 1.05,
+            '2027': 1.10,
+            '2028': 1.15,
+        };
+
+        // Update Preise bei Jahr-Änderung
+        const jahrSelect = document.querySelector('select[name="jahr"]');
+        jahrSelect.addEventListener('change', updatePrices);
+        function updatePrices() {
+            const factor = factors[jahrSelect.value] || 1.0;
+            document.querySelectorAll('.item-label').forEach(label => {
+                const item = label.getAttribute('data-base-price');
+                if (item && basePrices[item]) {
+                    const adjusted = (basePrices[item] * factor).toFixed(2);
+                    label.querySelector('.price').textContent = adjusted;
+                }
+            });
+        }
+        updatePrices();  // Initial aufrufen
+
+        // Aufbautag deaktivieren bei 1 Tag
+        const einsatztageInput = document.querySelector('input[name="einsatztage"]');
+        const aufbautagCheckbox = document.querySelector('input[name="aufbautag"]');
+        einsatztageInput.addEventListener('input', () => {
+            const days = parseFloat(einsatztageInput.value.replace(',', '.')) || 0;
+            if (days === 1) {
+                aufbautagCheckbox.disabled = true;
+                aufbautagCheckbox.checked = false;
+            } else if (days > 1) {
+                aufbautagCheckbox.disabled = false;
+            }
+        });
+
+        // Zwischenschritt: Weiter-Button
+        const nextButton = document.getElementById('next-button');
+        if (nextButton) {
+            nextButton.addEventListener('click', () => {
+                const days = parseFloat(einsatztageInput.value.replace(',', '.')) || 0;
+                if (isNaN(days) || days < 0.5) {
+                    alert('Zahl der Einsatztage muss mindestens 0,5 sein.');
+                    return;
+                }
+                if (days <= 1 && aufbautagCheckbox.checked) {
+                    alert('Aufbautag nicht möglich bei 1 Einsatztag.');
+                    return;
+                }
+                document.getElementById('step2').style.display = 'block';
+                document.getElementById('submit-button').style.display = 'block';
+                nextButton.style.display = 'none';  // Verstecke Weiter-Button
+            });
+
+            
+        const kameramannCheckbox = document.querySelector('input[name="kameramann"]');
+        const bimiCheckbox = document.querySelector('input[name="bimi"]');
+        const broadcastkameraCheckbox = document.querySelector('input[name="broadcastkamera"]');
+        const ptzCheckbox = document.querySelector('input[name="ptz"]');
+        const satellitenkameraCheckbox = document.querySelector('input[name="satellitenkamera"]');
+        const videofunkCheckbox = document.querySelector('input[name="videofunk"]');
+        const bildmischerCheckbox = document.querySelector('input[name="bildmischer"]');
+        const aufzeichnungsmaterialCheckbox = document.querySelector('input[name="aufzeichnungsmaterial"]');
+
+        function updateAnzahlFields() {
+            document.getElementById('kameramann_anzahl_field').style.display = kameramannCheckbox.checked ? 'block' : 'none';
+            document.getElementById('bimi_anzahl_field').style.display = bimiCheckbox.checked ? 'block' : 'none';
+            document.getElementById('broadcastkamera_anzahl_field').style.display = broadcastkameraCheckbox.checked ? 'block' : 'none';
+            document.getElementById('ptz_anzahl_field').style.display = ptzCheckbox.checked ? 'block' : 'none';
+            document.getElementById('satellitenkamera_anzahl_field').style.display = satellitenkameraCheckbox.checked ? 'block' : 'none';
+            document.getElementById('videofunk_anzahl_field').style.display = videofunkCheckbox.checked ? 'block' : 'none';
+            document.getElementById('bildmischer_anzahl_field').style.display = bildmischerCheckbox.checked ? 'block' : 'none';
+            document.getElementById('aufzeichnungsmaterial_anzahl_field').style.display = aufzeichnungsmaterialCheckbox.checked ? 'block' : 'none';
+        }
+
+        kameramannCheckbox.addEventListener('change', updateAnzahlFields);
+        bimiCheckbox.addEventListener('change', updateAnzahlFields);
+        broadcastkameraCheckbox.addEventListener('change', updateAnzahlFields);
+        ptzCheckbox.addEventListener('change', updateAnzahlFields);
+        satellitenkameraCheckbox.addEventListener('change', updateAnzahlFields);
+        videofunkCheckbox.addEventListener('change', updateAnzahlFields);
+        bildmischerCheckbox.addEventListener('change', updateAnzahlFields);
+        aufzeichnungsmaterialCheckbox.addEventListener('change', updateAnzahlFields);
+        updateAnzahlFields();  // Initial aufrufen, um sicherzustellen, dass Felder hidden sind
+
+        <!-- Anzahl-Felder zeigen bei Check -->
+        kameramannCheckbox.addEventListener('change', () => {
+        document.getElementById('kameramann_anzahl_field').style.display = kameramannCheckbox.checked ? 'block' : 'none';
+        });
+        bimiCheckbox.addEventListener('change', () => {
+            document.getElementById('bimi_anzahl_field').style.display = bimiCheckbox.checked ? 'block' : 'none';
+        });
+        broadcastkameraCheckbox.addEventListener('change', () => {
+            document.getElementById('broadcastkamera_anzahl_field').style.display = broadcastkameraCheckbox.checked ? 'block' : 'none';
+        });
+        ptzCheckbox.addEventListener('change', () => {
+            document.getElementById('ptz_anzahl_field').style.display = ptzCheckbox.checked ? 'block' : 'none';
+        });
+        satellitenkameraCheckbox.addEventListener('change', () => {
+            document.getElementById('satellitenkamera_anzahl_field').style.display = satellitenkameraCheckbox.checked ? 'block' : 'none';
+        });
+        videofunkCheckbox.addEventListener('change', () => {
+            document.getElementById('videofunk_anzahl_field').style.display = videofunkCheckbox.checked ? 'block' : 'none';
+        });
+        bildmischerCheckbox.addEventListener('change', () => {
+            document.getElementById('bildmischer_anzahl_field').style.display = bildmischerCheckbox.checked ? 'block' : 'none';
+        });
+        aufzeichnungsmaterialCheckbox.addEventListener('change', () => {
+            document.getElementById('aufzeichnungsmaterial_anzahl_field').style.display = aufzeichnungsmaterialCheckbox.checked ? 'block' : 'none';
+        });
+
+
+        } else {
+            console.error('Weiter-Button nicht gefunden!');
+        }
+    </script>
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
